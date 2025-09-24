@@ -1,0 +1,11 @@
+{
+  "name": "get-summary-analysis",
+  "version": "1.0.0",
+  "description": "Provides a summary analysis of all virtue reports.",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "@google-cloud/vertexai": "^1.1.0"
+  }
+}
+
