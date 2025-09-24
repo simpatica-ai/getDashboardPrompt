@@ -7,7 +7,7 @@ const vertex_ai = new VertexAI({
   location: 'us-central1' 
 });
 
-functions.http('getdashboardprompt', async (req, res) => {
+functions.http('getDashboardPrompt', async (req, res) => {
   // Set CORS headers
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
