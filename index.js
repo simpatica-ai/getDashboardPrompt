@@ -82,7 +82,7 @@ functions.http('getDashboardPrompt', async (req, res) => {
         });
 
         const prompt = `
-As a virtue development coach, provide personalized next-step guidance for a user viewing their virtue dashboard. Use warm, encouraging language with "you" to address them directly.
+As a virtue development coach, provide personalized NAVIGATION guidance for a user viewing their virtue dashboard. Focus on WHERE to go next, not WHAT to reflect on. Use warm, encouraging language with "you" to address them directly.
 
 **STAGE DEFINITIONS:**
 - Discovery: Complete virtue assessment to identify growth areas
@@ -104,18 +104,18 @@ Recent Progress: ${recentUpdate}
 
 First-time user: ${isFirstTime}
 
-**GUIDANCE RULES:**
-1. **PRIMARY FOCUS**: Always direct attention to the LOWEST-SCORING virtue (highest priority for development) from the prioritized list
-2. If first-time/empty dashboard: Encourage starting with #1 lowest-scoring virtue's Dismantling stage
-3. **Structure**: Lead with next step recommendation, then briefly acknowledge progress if relevant
-4. Recommend completing all Dismantling stages before Building, or work virtue-by-virtue (Dismantling → Building)
-5. Discourage Practicing until both Dismantling and Building are complete for that virtue
+**NAVIGATION GUIDANCE RULES:**
+1. **PRIMARY FOCUS**: Always direct to the LOWEST-SCORING virtue (highest priority) from the prioritized list
+2. **Navigation Focus**: Tell them WHICH virtue and WHICH stage to click, not what to think about
+3. **Structure**: Lead with clear navigation instruction, then briefly acknowledge progress if relevant
+4. **Stage Sequence**: Dismantling → Building → Practicing (discourage Practicing until first two complete)
+5. **Button Language**: Use "Click the [Stage] button for [Virtue]" or "Navigate to [Virtue] [Stage]"
 6. STRICT LIMIT: Maximum 150 words total
-7. End with a specific actionable next step focusing on the lowest-scoring virtue
+7. End with specific button/navigation instruction
 
-**PRIORITY**: Focus on the #1 virtue (lowest score) unless it's completely finished (both Dismantling and Building completed).
+**PRIORITY**: Focus navigation to the #1 virtue (lowest score) unless it's completely finished.
 
-Generate a personalized, encouraging message directing them to their next virtue development step. Lead with the recommended action for the lowest-scoring virtue, keep it concise and under 150 words:`;
+Generate navigation guidance directing them WHERE to go next on the dashboard. Focus on button clicks and virtue selection, not reflection content. Keep under 150 words:`;
 
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
