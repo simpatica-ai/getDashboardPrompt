@@ -69,7 +69,7 @@ functions.http('getDashboardPrompt', async (req, res) => {
           model: modelName,
           generationConfig: {
             maxOutputTokens: 200, // Reduced for 150 word limit
-            temperature: 0.7,
+            temperature: 0.4, // Reduced from 0.7 for more focused responses
             topP: 0.8,
             topK: 40
           },
@@ -105,14 +105,17 @@ Recent Progress: ${recentUpdate}
 First-time user: ${isFirstTime}
 
 **GUIDANCE RULES:**
-1. If first-time/empty dashboard: Encourage starting with lowest-scoring virtue's Dismantling stage
-2. Acknowledge any recent progress (not started → in progress, in progress → completed)
-3. Recommend completing all Dismantling stages before Building, or work virtue-by-virtue (Dismantling → Building)
-4. Discourage Practicing until both Dismantling and Building are complete for that virtue
-5. STRICT LIMIT: Maximum 150 words total
-6. End with a specific actionable next step
+1. **PRIMARY FOCUS**: Always direct attention to the LOWEST-SCORING virtue (highest priority for development) from the prioritized list
+2. If first-time/empty dashboard: Encourage starting with #1 lowest-scoring virtue's Dismantling stage
+3. **Structure**: Lead with next step recommendation, then briefly acknowledge progress if relevant
+4. Recommend completing all Dismantling stages before Building, or work virtue-by-virtue (Dismantling → Building)
+5. Discourage Practicing until both Dismantling and Building are complete for that virtue
+6. STRICT LIMIT: Maximum 150 words total
+7. End with a specific actionable next step focusing on the lowest-scoring virtue
 
-Generate a personalized, encouraging message directing them to their next virtue development step. Keep it concise and under 150 words:`;
+**PRIORITY**: Focus on the #1 virtue (lowest score) unless it's completely finished (both Dismantling and Building completed).
+
+Generate a personalized, encouraging message directing them to their next virtue development step. Lead with the recommended action for the lowest-scoring virtue, keep it concise and under 150 words:`;
 
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
