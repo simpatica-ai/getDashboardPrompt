@@ -20,13 +20,19 @@ functions.http('getDashboardPrompt', async (req, res) => {
 
   try {
     // Validate request body
-    if (!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.analyses) || !Array.isArray(req.body.prioritizedVirtues)) {
-      return res.status(400).send({ error: 'Invalid request body: Expected analyses and prioritizedVirtues arrays.' });
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).send({ error: 'Invalid request body' });
     }
 
-    const { analyses, prioritizedVirtues } = req.body;
+    const { 
+      assessmentSummary, 
+      prioritizedVirtues, 
+      stageProgress, 
+      recentProgress,
+      isFirstTime = false 
+    } = req.body;
     
-    // Using the exact same successful model fallback strategy
+    // Using the same successful model fallback strategy
     const modelNames = [
       'gemini-2.5-flash-lite',
       'gemini-2.0-flash-lite',
@@ -35,22 +41,34 @@ functions.http('getDashboardPrompt', async (req, res) => {
       'gemini-pro'
     ];
 
-    let summaryText = '';
+    let promptText = '';
     let lastError = null;
     let successfulModel = '';
     
-    const priorityList = prioritizedVirtues.map((v, i) => `${i + 1}. ${v.virtue} (Score: ${(10 - v.defectIntensity).toFixed(1)})`).join('\n');
-    const combinedAnalyses = analyses.map(a => `- ${a.virtue}: ${a.analysis}`).join('\n\n');
+    // Prepare input data for the prompt
+    const virtueList = prioritizedVirtues?.map((v, i) => 
+      `${i + 1}. ${v.virtue} (Score: ${(10 - v.defectIntensity).toFixed(1)})`
+    ).join('\n') || 'No assessment data available';
+
+    const progressSummary = stageProgress ? Object.entries(stageProgress)
+      .map(([key, status]) => {
+        const [virtueId, stage] = key.split('-');
+        const virtue = prioritizedVirtues?.find(v => v.virtueId == virtueId);
+        const stageName = stage == '1' ? 'Dismantling' : stage == '2' ? 'Building' : 'Practicing';
+        return `${virtue?.virtue || 'Unknown'} - ${stageName}: ${status}`;
+      }).join('\n') : 'No progress data available';
+
+    const recentUpdate = recentProgress || 'No recent updates';
 
     // Try each model until one works
     for (const modelName of modelNames) {
       try {
-        console.log(`Trying summary model: ${modelName}`);
+        console.log(`Trying model: ${modelName}`);
         
         const generativeModel = vertex_ai.getGenerativeModel({
           model: modelName,
           generationConfig: {
-            maxOutputTokens: 1024,
+            maxOutputTokens: 512,
             temperature: 0.7,
             topP: 0.8,
             topK: 40
@@ -63,59 +81,73 @@ functions.http('getDashboardPrompt', async (req, res) => {
           ]
         });
 
-        // New prompt specifically for generating the summary
         const prompt = `
-          As an expert virtuous coach who empathizes with those in recovery, synthesize the following 12 individual virtue analyses into a single, holistic summary for a practitioner to guide virtue growth. The response should be approximately 200 words. Use "you" familiar language to address the user directly.
+As a virtue development coach, provide personalized next-step guidance for a user viewing their virtue dashboard. Use warm, encouraging language with "you" to address them directly.
 
-          **INPUT DATA:**
+**STAGE DEFINITIONS:**
+- Discovery: Complete virtue assessment to identify growth areas
+- Dismantling: Recognize and work through character defects that block virtue
+- Building: Develop understanding and practice of the virtue itself  
+- Practicing: Apply virtue consistently in daily life (only after completing Dismantling and Building)
 
-          **1. User's Prioritized Virtue List (from highest to lowest priority for development):**
-          ${priorityList}
+**USER DATA:**
 
-          **2. Individual Virtue Analyses:**
-          ${combinedAnalyses}
+Assessment Summary: ${assessmentSummary || 'Assessment completed'}
 
-          **TASKS:**
-          1.  **Identify Overarching Themes:** Analyze all 12 reports to find common patterns or root causes. For example, do issues with Honesty, Integrity, and Responsibility all point to a core challenge with accountability? Or do struggles with Patience and Self-Control indicate a broader issue with emotional regulation?
-          2.  **State the Primary Growth Area:** Begin with a direct statement identifying the user's most significant area for development, referencing the top 2-3 virtues from the priority list that scored the lowest. The lower the score the greater the development need.
-          3.  **Commend Strengths:** Briefly acknowledge any virtues where the user shows relative strength or balance. Virtues with scores above 7.0 can be mentioned here.
-          4.  **Provide a Synthesis:** Briefly explain how the identified themes connect across multiple virtues.
-          5.  **Conclude with a Strategic Recommendation:** Offer a high-level recommendation or a key question for the practitioner to focus on with the user that addresses the core theme.
-          6.  Keep the entire response under 300 words.`;
+Prioritized Virtues (lowest scores need most work):
+${virtueList}
+
+Current Stage Progress:
+${progressSummary}
+
+Recent Progress: ${recentUpdate}
+
+First-time user: ${isFirstTime}
+
+**GUIDANCE RULES:**
+1. If first-time/empty dashboard: Encourage starting with lowest-scoring virtue's Dismantling stage
+2. Acknowledge any recent progress (not started → in progress, in progress → completed)
+3. Recommend completing all Dismantling stages before Building, or work virtue-by-virtue (Dismantling → Building)
+4. Discourage Practicing until both Dismantling and Building are complete for that virtue
+5. Keep response under 150 words
+6. End with a specific actionable next step
+
+Generate a personalized, encouraging message directing them to their next virtue development step:`;
 
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
         
         if (response.candidates && response.candidates[0] && response.candidates[0].content) {
-          summaryText = response.candidates[0].content.parts[0].text;
+          promptText = response.candidates[0].content.parts[0].text;
           successfulModel = modelName;
-          console.log(`Success with summary model: ${modelName}`);
+          console.log(`Success with model: ${modelName}`);
           break;
         } else {
-          throw new Error('Invalid response format from summary model');
+          throw new Error('Invalid response format from model');
         }
         
       } catch (error) {
         lastError = error;
-        console.warn(`Summary model ${modelName} failed:`, error.message);
+        console.warn(`Model ${modelName} failed:`, error.message);
         continue; // Try next model
       }
     }
 
-    if (!summaryText) {
-      console.error('All summary models failed:', lastError);
-      // Provide a meaningful fallback summary response
-      summaryText = `A full summary could not be generated at this time. Based on the data, the primary areas for development appear to be ${prioritizedVirtues.slice(0, 2).map(v => v.virtue).join(' and ')}. Focusing on the root causes of challenges in these areas is a recommended next step.`;
+    if (!promptText) {
+      console.error('All models failed:', lastError);
+      // Provide a meaningful fallback
+      const topVirtue = prioritizedVirtues?.[0]?.virtue || 'your priority virtue';
+      promptText = `Welcome to your virtue development journey! ${isFirstTime ? `Start by working on ${topVirtue} in the Dismantling stage to begin recognizing character defects.` : `Continue your progress by focusing on the next stage of ${topVirtue}.`} Click the stage buttons to begin your reflection.`;
     }
 
     res.status(200).send({ 
-      summary: summaryText,
+      prompt: promptText,
       model: successfulModel || 'fallback',
       success: true 
     });
 
   } catch (error) {
-    console.error('Unexpected error in getSummaryAnalysis:', error);
+    console.error('Unexpected error in getDashboardPrompt:', error);
     res.status(500).send({ 
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
