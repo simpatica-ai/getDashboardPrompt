@@ -1,7 +1,7 @@
 {
-  "name": "get-summary-analysis",
+  "name": "getdashboardprompt",
   "version": "1.0.0",
-  "description": "Provides a summary analysis of all virtue reports.",
+  "description": "Provides a prompt on the dashboard",
   "main": "index.js",
   "dependencies": {
     "@google-cloud/functions-framework": "^3.3.0",
