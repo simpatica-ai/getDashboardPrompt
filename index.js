@@ -68,7 +68,7 @@ functions.http('getDashboardPrompt', async (req, res) => {
         const generativeModel = vertex_ai.getGenerativeModel({
           model: modelName,
           generationConfig: {
-            maxOutputTokens: 512,
+            maxOutputTokens: 200, // Reduced for 150 word limit
             temperature: 0.7,
             topP: 0.8,
             topK: 40
@@ -109,16 +109,24 @@ First-time user: ${isFirstTime}
 2. Acknowledge any recent progress (not started → in progress, in progress → completed)
 3. Recommend completing all Dismantling stages before Building, or work virtue-by-virtue (Dismantling → Building)
 4. Discourage Practicing until both Dismantling and Building are complete for that virtue
-5. Keep response under 150 words
+5. STRICT LIMIT: Maximum 150 words total
 6. End with a specific actionable next step
 
-Generate a personalized, encouraging message directing them to their next virtue development step:`;
+Generate a personalized, encouraging message directing them to their next virtue development step. Keep it concise and under 150 words:`;
 
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
         
         if (response.candidates && response.candidates[0] && response.candidates[0].content) {
-          promptText = response.candidates[0].content.parts[0].text;
+          let generatedText = response.candidates[0].content.parts[0].text;
+          
+          // Enforce 150 word limit by truncating if necessary
+          const words = generatedText.split(/\s+/);
+          if (words.length > 150) {
+            generatedText = words.slice(0, 150).join(' ') + '...';
+          }
+          
+          promptText = generatedText;
           successfulModel = modelName;
           console.log(`Success with model: ${modelName}`);
           break;
