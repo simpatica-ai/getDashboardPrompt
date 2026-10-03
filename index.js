@@ -32,13 +32,11 @@ functions.http('getDashboardPrompt', async (req, res) => {
       isFirstTime = false 
     } = req.body;
     
-    // Using the same successful model fallback strategy
+    // Model fallback strategy (refreshed Oct 2026 — dropped retired 1.5/pro models)
     const modelNames = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash-lite',
-      'gemini-1.5-flash',
-      'gemini-pro'
+      'gemini-2.5-flash-lite',  // Primary — current, cost-effective
+      'gemini-2.5-flash',       // Fallback 1 — more capable
+      'gemini-2.0-flash'        // Fallback 2 — not on retirement list
     ];
 
     let promptText = '';
