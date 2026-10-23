@@ -104,7 +104,8 @@ Generate navigation guidance directing them WHERE to go next on the dashboard. F
           model: modelName,
           contents: prompt,
           config: {
-            maxOutputTokens: 200, // Reduced for 150 word limit
+            maxOutputTokens: 800, // Raised: Gemini 3.x thinking tokens share this budget; 200 starved the visible answer
+            thinkingConfig: { thinkingBudget: 0 }, // Disable thinking so it doesn't consume the output budget
             temperature: 0.4, // Reduced from 0.7 for more focused responses
             topP: 0.8,
             topK: 40,
@@ -117,6 +118,11 @@ Generate navigation guidance directing them WHERE to go next on the dashboard. F
           }
         });
 
+        const finishReason = result.candidates?.[0]?.finishReason;
+        if (finishReason === 'MAX_TOKENS') {
+          console.warn(`getDashboardPrompt: model ${modelName} response was truncated by the token cap (finishReason=MAX_TOKENS)`);
+        }
+
         const text = result.text ?? result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text && text.trim().length > 0) {
           let generatedText = text;
@@ -124,7 +130,7 @@ Generate navigation guidance directing them WHERE to go next on the dashboard. F
           // Enforce 150 word limit by truncating if necessary
           const words = generatedText.split(/\s+/);
           if (words.length > 150) {
-            generatedText = words.slice(0, 150).join(' ') + '...';
+            generatedText = words.slice(0, 150).join(' ');
           }
           
           promptText = generatedText;
